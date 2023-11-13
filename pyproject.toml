@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "tensortradepy"
+version = "0.1.0"
+description = "Python client for the Tensor Trade API"
+authors = ["Defilogist <defilogist@thewise.trade>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.31.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
