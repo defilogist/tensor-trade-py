@@ -1,4 +1,4 @@
-# tensor-trade-js
+# tensor-trade-py
 
 Simple Python client for the Tensor Trade API.
 
@@ -12,7 +12,7 @@ I encourage you to tests your scripts with cheap cNFT collections first.
 ## Install
 
 ```
-pip install git+https://github.com/defilogist/tensor-trade-js
+pip install git+https://github.com/defilogist/tensor-trade-py
 ```
 
 ## Usage example
