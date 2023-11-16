@@ -1,5 +1,10 @@
+import base58
 import requests
 import uuid
+
+from solders.keypair import Keypair
+from solana.rpc.api import Client
+from solana.transaction import Transaction
 
 
 def to_solami(price):
@@ -10,17 +15,48 @@ def from_solami(price):
     return float(price) / 1_000_000_000
 
 
+def get_keypair_from_base58_secret_key(private_key_base58):
+    return Keypair.from_base58_string(private_key_base58)
+
+
+def run_solana_transaction(client, sender_key_pair, transaction_buffer):
+    transaction = Transaction.deserialize(bytes(transaction_buffer))
+    transaction.sign(sender_key_pair)
+    response = None
+    try:
+        response = client.send_transaction(transaction, sender_key_pair)
+    except Exception as e:
+        print("An error occurred:", e)
+    return response
+
+
 class TensorClient:
-    def __init__(self, api_key):
+
+    def __init__(
+        self,
+        api_key,
+        private_key=None,
+        network="devnet",
+    ):
         self.init_client(api_key)
 
-    def init_client(self, api_key):
+        self.private_key = None
+        if private_key is not None:
+            self.private_key = get_keypair_from_base58_secret_key(private_key)
+
+        url = f"https://api.{network}.solana.com"
+        if network.startswith("http"):
+            url = network
+        self.solana_client = Client(url)
+
+    def init_client(self, api_key, private_key=None):
         self.session = requests.session()
         self.api_key = api_key
         self.session.headers = {
             'Content-Type': 'application/json',
             'X-TENSOR-API-KEY': api_key
         }
+        self.private_key = private_key
 
     def send_query(self, query, variables):
         resp = self.session.post(
@@ -30,7 +66,13 @@ class TensorClient:
                 "variables": variables
             }
         )
-        return resp.json().get("data", {})
+        try:
+            return resp.json().get("data", {})
+        except requests.exceptions.JSONDecodeError:
+            if resp.status_code == 403:
+                raise Exception("Invalid API Key")
+            else:
+                raise
 
     def get_collection_infos(self, slug):
         query = """query CollectionsStats($slug: String!) {
@@ -57,9 +99,11 @@ class TensorClient:
 
     def get_collection_floor(self, slug):
         data = self.get_collection_infos(slug)
+        if data is None:
+            raise Exception("The collection %s is not listed." % slug)
         return from_solami(data["statsV2"]["buyNowPrice"])
 
-    def list_nft(mint, walletAddress, price):
+    def list_cnft(self, mint, walletAddress, price):
         query = """query TcompListTx(
             $mint: String!,
             $owner: String!,
@@ -76,7 +120,46 @@ class TensorClient:
         variables = {
             "mint": mint,
             "owner": walletAddress,
-            "price": '' + toSolami(price)
+            "price": str(to_solami(price))
         }
         tx = self.send_query(query, variables)
-        return tx["tcompListTx"]["txs"]
+        transaction = tx["tcompListTx"]["txs"][0]["tx"]["data"]
+        result = run_solana_transaction(
+            self.solana_client,
+            self.private_key,
+            transaction
+        )
+        print(f"cNFT listed {mint}")
+        return result
+
+
+    def list_nft(self, mint, walletAddress, price):
+        query = """query TswapListNftTx(
+            $mint: String!,
+            $owner: String!,
+            $price: Decimal!
+        ) {
+            tswapListNftTx(mint: $mint, owner: $owner, price: $price) {
+                txs {
+                    lastValidBlockHeight
+                    tx
+                    txV0
+                }
+            }
+        }"""
+        variables = {
+            "mint": mint,
+            "owner": walletAddress,
+            "price": str(to_solami(price))
+        }
+        tx = self.send_query(query, variables)
+        transaction = tx["tswapListNftTx"]["txs"][0]["tx"]["data"]
+        result = run_solana_transaction(
+            self.solana_client,
+            self.private_key,
+            transaction
+        )
+        print(f"NFT listed {mint}")
+        return result
+
+
