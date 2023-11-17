@@ -44,5 +44,5 @@ client.list_nft(nft["mint"], nft["walletAddress"], floor * percentage)
 
 * get\_collection\_infos(slug)
 * get\_collection\_floor(slug)
-* list\_nft(mint, wallet\_address, price) // Price in $SOL
-* list\_cnft(mint, wallet\_address, price) // Price in $SOL
+* list\_nft(mint, price) // Price in $SOL
+* list\_cnft(mint, price) // Price in $SOL

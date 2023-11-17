@@ -39,24 +39,24 @@ class TensorClient:
         network="devnet",
     ):
         self.init_client(api_key)
+        self.init_solana_client(private_key, network)
 
-        self.private_key = None
-        if private_key is not None:
-            self.private_key = get_keypair_from_base58_secret_key(private_key)
-
-        url = f"https://api.{network}.solana.com"
-        if network.startswith("http"):
-            url = network
-        self.solana_client = Client(url)
-
-    def init_client(self, api_key, private_key=None):
+    def init_client(self, api_key):
         self.session = requests.session()
         self.api_key = api_key
         self.session.headers = {
             'Content-Type': 'application/json',
             'X-TENSOR-API-KEY': api_key
         }
-        self.private_key = private_key
+
+    def init_solana_client(self, private_key, network):
+        self.keypair = None
+        if private_key is not None:
+            self.keypair = get_keypair_from_base58_secret_key(private_key)
+        url = f"https://api.{network}.solana.com"
+        if network.startswith("http"):
+            url = network
+        self.solana_client = Client(url)
 
     def send_query(self, query, variables):
         resp = self.session.post(
@@ -103,7 +103,7 @@ class TensorClient:
             raise Exception("The collection %s is not listed." % slug)
         return from_solami(data["statsV2"]["buyNowPrice"])
 
-    def list_cnft(self, mint, walletAddress, price):
+    def list_cnft(self, mint, price, wallet_address=None):
         query = """query TcompListTx(
             $mint: String!,
             $owner: String!,
@@ -117,23 +117,26 @@ class TensorClient:
                 }
             }
         }"""
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
         variables = {
             "mint": mint,
-            "owner": walletAddress,
+            "owner": wallet_address,
             "price": str(to_solami(price))
         }
         tx = self.send_query(query, variables)
         transaction = tx["tcompListTx"]["txs"][0]["tx"]["data"]
         result = run_solana_transaction(
             self.solana_client,
-            self.private_key,
+            self.keypair,
             transaction
         )
         print(f"cNFT listed {mint}")
         return result
 
 
-    def list_nft(self, mint, walletAddress, price):
+    def list_nft(self, mint, price, wallet_address=None):
         query = """query TswapListNftTx(
             $mint: String!,
             $owner: String!,
@@ -147,19 +150,20 @@ class TensorClient:
                 }
             }
         }"""
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
         variables = {
             "mint": mint,
-            "owner": walletAddress,
+            "owner": wallet_address,
             "price": str(to_solami(price))
         }
         tx = self.send_query(query, variables)
         transaction = tx["tswapListNftTx"]["txs"][0]["tx"]["data"]
         result = run_solana_transaction(
             self.solana_client,
-            self.private_key,
+            self.keypair,
             transaction
         )
         print(f"NFT listed {mint}")
         return result
-
-
