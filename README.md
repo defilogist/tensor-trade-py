@@ -13,6 +13,15 @@ may occur when using this SDK. Use at your own risk.
 
 I encourage you to tests your scripts with cheap cNFT collections first.
 
+## Contributions
+
+Any contribution is welcome, please open your PR for additions and report bug
+through Github issues.
+
+## Tips
+
+If you like this client, you can tip me at: wiseCUogbp8QkzrNF6ku8cfZrWkRtbTinYso1KQRH7i
+
 
 ## Install
 
@@ -33,11 +42,11 @@ client = TensorClient(
 )
 floor = client.get_collection_floor("theheist")
 const percentage = 0.99
+price = floor * percentage
 const nft = {
-  "mint": "nft-mint",
-  "wallet_address": "wallet-address"
+  "mint": "nft-mint"
 }
-client.list_nft(nft["mint"], nft["walletAddress"], floor * percentage)
+client.list_nft(nft["mint"], price) # we assume your keypair owns the NFT.
 ```
 
 ## Functions available
