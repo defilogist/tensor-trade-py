@@ -55,3 +55,8 @@ client.list_nft(nft["mint"], price) # we assume your keypair owns the NFT.
 * get\_collection\_floor(slug)
 * list\_nft(mint, price) // Price in $SOL
 * list\_cnft(mint, price) // Price in $SOL
+* delist\_cnft(mint)
+* edit\_cnft\_listing(mint, price) // Price in $SOL
+* set\_cnft\_collection\_bid(slug, price, quantity)
+* edit\_cnft\_collection\_bid(slug, price, quantity)
+* cancel\_cnft\_collection\_bid(slug, price, quantity)

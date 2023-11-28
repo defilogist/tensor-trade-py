@@ -2,32 +2,17 @@ import base58
 import requests
 import uuid
 
-from solders.keypair import Keypair
-from solana.rpc.api import Client
-from solana.transaction import Transaction
+from .solana import (
+    create_client,
+    from_solami,
+    to_solami,
+    get_keypair_from_base58_secret_key,
+    run_solana_transaction
+)
 
-
-def to_solami(price):
-    return price * 1_000_000_000
-
-
-def from_solami(price):
-    return float(price) / 1_000_000_000
-
-
-def get_keypair_from_base58_secret_key(private_key_base58):
-    return Keypair.from_base58_string(private_key_base58)
-
-
-def run_solana_transaction(client, sender_key_pair, transaction_buffer):
-    transaction = Transaction.deserialize(bytes(transaction_buffer))
-    transaction.sign(sender_key_pair)
-    response = None
-    try:
-        response = client.send_transaction(transaction, sender_key_pair)
-    except Exception as e:
-        print("An error occurred:", e)
-    return response
+from .helpers import (
+    build_tensor_query
+)
 
 
 class TensorClient:
@@ -38,6 +23,8 @@ class TensorClient:
         private_key=None,
         network="devnet",
     ):
+        """
+        """
         self.init_client(api_key)
         self.init_solana_client(private_key, network)
 
@@ -50,15 +37,19 @@ class TensorClient:
         }
 
     def init_solana_client(self, private_key, network):
+        """
+        """
         self.keypair = None
         if private_key is not None:
             self.keypair = get_keypair_from_base58_secret_key(private_key)
         url = f"https://api.{network}.solana.com"
         if network.startswith("http"):
             url = network
-        self.solana_client = Client(url)
+        self.solana_client = create_client(url)
 
     def send_query(self, query, variables):
+        """
+        """
         resp = self.session.post(
             "https://api.tensor.so/graphql/",
             json={
@@ -74,7 +65,21 @@ class TensorClient:
             else:
                 raise
 
+    def extract_transaction(self, data, name):
+        return data[name]["txs"][0]["tx"]["data"]
+
+    def execute_query(self, query, variables, name):
+        data = self.send_query(query, variables)
+        transaction = self.extract_transaction(data, name)
+        return run_solana_transaction(
+            self.solana_client,
+            self.keypair,
+            transaction
+        )
+
     def get_collection_infos(self, slug):
+        """
+        """
         query = """query CollectionsStats($slug: String!) {
             instrumentTV2(slug: $slug) {
                 id
@@ -98,72 +103,175 @@ class TensorClient:
         return data.get("instrumentTV2", {})
 
     def get_collection_floor(self, slug):
+        """
+        """
         data = self.get_collection_infos(slug)
         if data is None:
             raise Exception("The collection %s is not listed." % slug)
         return from_solami(data["statsV2"]["buyNowPrice"])
 
     def list_cnft(self, mint, price, wallet_address=None):
-        query = """query TcompListTx(
-            $mint: String!,
-            $owner: String!,
-            $price: Decimal!
-        ) {
-            tcompListTx(mint: $mint, owner: $owner, price: $price) {
-                txs {
-                    lastValidBlockHeight
-                    tx
-                    txV0
-                }
-            }
-        }"""
+        """
+        """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
 
+        query = build_tensor_query(
+            "TcompListTx",
+            "tcompListTx",
+            [
+                ("mint", "String"),
+                ("owner", "String"),
+                ("price", "Decimal"),
+            ]
+        )
         variables = {
             "mint": mint,
             "owner": wallet_address,
             "price": str(to_solami(price))
         }
-        tx = self.send_query(query, variables)
-        transaction = tx["tcompListTx"]["txs"][0]["tx"]["data"]
-        result = run_solana_transaction(
-            self.solana_client,
-            self.keypair,
-            transaction
-        )
-        print(f"cNFT listed {mint}")
-        return result
+        return self.execute_query(query, variables, "tcompListTx")
 
+    def edit_cnft_listing(self, mint, price, wallet_address=None):
+        """
+        """
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TcompEditTx",
+            "tcompEditTx",
+            [
+                ("mint", "String"),
+                ("owner", "String"),
+                ("price", "Decimal"),
+            ]
+        )
+        variables = {
+            "mint": mint,
+            "owner": wallet_address,
+            "price": str(to_solami(price))
+        }
+        return self.execute_query(query, variables, "tcompEditTx")
+
+    def delist_cnft(self, mint, wallet_address=None):
+        """
+        """
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TcompDelistTx",
+            "tcompDelistTx",
+            [
+                ("mint", "String"),
+                ("owner", "String"),
+            ]
+        )
+        variables = {
+            "mint": mint,
+            "owner": wallet_address,
+        }
+        return self.execute_query(query, variables, "tcompDelistTx")
 
     def list_nft(self, mint, price, wallet_address=None):
-        query = """query TswapListNftTx(
-            $mint: String!,
-            $owner: String!,
-            $price: Decimal!
-        ) {
-            tswapListNftTx(mint: $mint, owner: $owner, price: $price) {
-                txs {
-                    lastValidBlockHeight
-                    tx
-                    txV0
-                }
-            }
-        }"""
+        """
+        """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
 
+        query = build_tensor_query(
+            "TswapListNftTx",
+            "tswapListNftTx",
+            [
+                ("mint", "String"),
+                ("owner", "String"),
+                ("price", "Decimal"),
+            ]
+        )
         variables = {
             "mint": mint,
             "owner": wallet_address,
             "price": str(to_solami(price))
         }
-        tx = self.send_query(query, variables)
-        transaction = tx["tswapListNftTx"]["txs"][0]["tx"]["data"]
-        result = run_solana_transaction(
-            self.solana_client,
-            self.keypair,
-            transaction
+        return self.execute_query(query, variables, "tswapListNftTx")
+
+    def set_cnft_collection_bid(
+        self,
+        slug,
+        price,
+        quantity,
+        wallet_address=None
+    ):
+        """
+        """
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TcompBidTxForCollection",
+            "tcompBidTx",
+            [
+                ("owner", "String"),
+                ("price", "Decimal"),
+                ("quantity", "Float"),
+                ("slug", "String")
+            ],
+            {
+                "txs": {
+                    "lastValidBlockHeight": None,
+                    "tx": None,
+                    "txV0": None
+                }
+            }
         )
-        print(f"NFT listed {mint}")
-        return result
+        variables = {
+          "owner": wallet_address,
+          "price": str(to_solami(price)),
+          "quantity": quantity,
+          "slug": slug,
+        }
+        data = self.execute_query(query, variables, "tcompBidTx")
+        return data
+
+    def edit_cnft_collection_bid(
+        self,
+        bid_address,
+        price,
+        quantity
+    ):
+        """
+        """
+        query = build_tensor_query(
+            "TcompEditBidTx",
+            "tcompEditBidTx",
+            [
+                ("bidStateAddress", "String"),
+                ("price", "Decimal"),
+                ("quantity", "Float")
+            ]
+        )
+        variables = {
+          "bidStateAddress": bid_address,
+          "price": str(to_solami(price)),
+          "quantity": quantity,
+        }
+        return self.execute_query(query, variables, "tcompEditBidTx")
+
+    def cancel_cnft_collection_bid(
+        self,
+        bid_address
+    ):
+        """
+        """
+        query = build_tensor_query(
+            "TcompCancelCollBidTx",
+            "tcompCancelCollBidTx",
+            [
+                ("bidStateAddress", "String"),
+            ]
+        )
+        variables = {
+          "bidStateAddress": bid_address,
+        }
+        return self.execute_query(query, variables, "tcompCancelCollBidTx")
