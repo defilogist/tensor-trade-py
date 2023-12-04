@@ -16,7 +16,7 @@ may occur when using this SDK. Use at your own risk.
 
 ## Tips
 
-If you like this client, you can tip me at: wiseCUogbp8QkzrNF6ku8cfZrWkRtbTinYso1KQRH7i
+If you like this client, you can tip me at: thewisetrade.sol
 
 ## Install
 

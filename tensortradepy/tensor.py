@@ -7,7 +7,8 @@ from .solana import (
     from_solami,
     to_solami,
     get_keypair_from_base58_secret_key,
-    run_solana_transaction
+    run_solana_transaction,
+    run_solana_versioned_transaction
 )
 
 from .helpers import (
@@ -36,7 +37,7 @@ class TensorClient:
         self.init_client(api_key)
         self.init_solana_client(private_key, network)
 
-    def init_client(self, api_key):
+    def init_client(self, api_key: str):
         self.session = requests.session()
         self.api_key = api_key
         self.session.headers = {
@@ -77,16 +78,27 @@ class TensorClient:
     def extract_transaction(self, data, name):
         return data[name]["txs"][0]["tx"]["data"]
 
+    def extract_versioned_transaction(self, data, name):
+        return data[name]["txs"][0]["txV0"]["data"]
+
     def execute_query(self, query, variables, name):
         data = self.send_query(query, variables)
-        transaction = self.extract_transaction(data, name)
-        return run_solana_transaction(
-            self.solana_client,
-            self.keypair,
-            transaction
-        )
+        if data[name]["txs"][0].get("txV0", None) is not None:
+            transaction = self.extract_versioned_transaction(data, name)
+            return run_solana_versioned_transaction(
+                self.solana_client,
+                self.keypair,
+                transaction
+            )
+        else:
+            transaction = self.extract_transaction(data, name)
+            return run_solana_transaction(
+                self.solana_client,
+                self.keypair,
+                transaction
+            )
 
-    def get_collection_infos(self, slug):
+    def get_collection_infos(self, slug: str):
         """
         Retrieve the main information about a collection including buyNowPrice,
         sellNowPrice and the number of listed elements.
@@ -342,3 +354,71 @@ class TensorClient:
           "bidStateAddress": bid_address,
         }
         return self.execute_query(query, variables, "tcompCancelCollBidTx")
+
+    def set_nft_collection_bid(
+        self,
+        slug,
+        price,
+        quantity,
+        wallet_address=None
+    ):
+        """
+        """
+        self.set_cnft_collection_bid(
+            slug,
+            price,
+            wallet_address=wallet_address
+        )
+
+    def edit_nft_collection_bid(
+        self,
+        bid_address,
+        price,
+        quantity
+    ):
+        """
+        """
+        self.edit(
+            bid_address,
+            price,
+            quantity
+        )
+
+    def cancel_nft_collection_bid(
+        self,
+        bid_address
+    ):
+        """
+        """
+        self.cancel_cnft_collection_bid(
+            bid_address
+        )
+
+    def buy_nft(
+        self,
+        seller,
+        mint,
+        price,
+        wallet_address=None
+    ):
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TswapBuySingleListingTx",
+            "tswapBuySingleListingTx",
+            [
+                ("buyer", "String"),
+                ("maxPrice", "Decimal"),
+                ("mint", "String"),
+                ("owner", "String")
+            ]
+        )
+        variables = {
+          "owner": seller,
+          "maxPrice": str(to_solami(price)),
+          "mint": mint,
+          "buyer": wallet_address,
+        }
+        print(variables)
+        return self.execute_query(query, variables, "tswapBuySingleListingTx")

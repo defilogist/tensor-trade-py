@@ -1,6 +1,11 @@
 from solana.rpc.api import Client
-from solders.keypair import Keypair
 from solana.transaction import Transaction
+from solana.blockhash import BlockhashCache
+from solders.keypair import Keypair
+from solders.transaction import VersionedTransaction
+from solders.message import to_bytes_versioned, Message, MessageV0
+from solders.hash import Hash
+from solders.instruction import Instruction
 
 
 def create_client(url):
@@ -30,3 +35,23 @@ def run_solana_transaction(client, sender_key_pair, transaction_buffer):
     return response
 
 
+def run_solana_versioned_transaction(client, sender_key_pair, transaction_buffer):
+    block = client.get_latest_blockhash().value
+    transaction = VersionedTransaction.from_bytes(bytes(transaction_buffer))
+    new_msg = MessageV0(
+        transaction.message.header,
+        transaction.message.account_keys,
+        block.blockhash,
+        transaction.message.instructions,
+        []
+    )
+    signature = sender_key_pair.sign_message(to_bytes_versioned(new_msg))
+    signed_tx = VersionedTransaction.populate(new_msg, [signature])
+    response = None
+    try:
+        response = client.send_transaction(
+            signed_tx
+        )
+    except Exception as e:
+        print("An error occurred:", e)
+    return response
