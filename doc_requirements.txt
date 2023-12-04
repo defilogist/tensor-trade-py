@@ -1,4 +1,4 @@
 mkdocs
-mddockstrings
-mddockstrings[python]
+mkdocstrings
+mkdocstrings[python]
 tensortradepy
