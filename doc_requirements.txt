@@ -1,0 +1,4 @@
+mkdocs
+mddockstrings
+mddockstrings[python]
+tensortradepy

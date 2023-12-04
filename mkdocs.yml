@@ -1,0 +1,14 @@
+site_name: Tensor Trade Python Client (Unofficial)
+site_url: https://tensortradepy.thewise.trade/
+nav:
+  - Getting started: index.md
+  - Specifications: specifications.md
+theme: dracula
+
+
+markdown_extensions:
+  - codehilite
+
+plugins:
+  - search
+  - mkdocstrings
