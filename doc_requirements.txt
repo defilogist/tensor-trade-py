@@ -1,4 +1,5 @@
 mkdocs
 mkdocstrings
 mkdocstrings[python]
+mkdocs-dracula-theme
 tensortradepy
