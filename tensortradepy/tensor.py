@@ -24,6 +24,14 @@ class TensorClient:
         network="devnet",
     ):
         """
+        The constructor sets up the client. It allows you to set your Tensor
+        Trade API key, your wallet private key to perform operations and the
+        Solana network where transactions are set.
+
+        Args:
+            api_key (str): The Tensor Trade API authentication key.
+            private_key (str): Your wallet private key.
+            network (str): The Solana network to use.
         """
         self.init_client(api_key)
         self.init_solana_client(private_key, network)
@@ -33,6 +41,7 @@ class TensorClient:
         self.api_key = api_key
         self.session.headers = {
             'Content-Type': 'application/json',
+            'User-Agent': 'tensortradepy',
             'X-TENSOR-API-KEY': api_key
         }
 
@@ -79,6 +88,14 @@ class TensorClient:
 
     def get_collection_infos(self, slug):
         """
+        Retrieve the main information about a collection including buyNowPrice,
+        sellNowPrice and the number of listed elements.
+
+        Args:
+            slug (str): the collection slug (ID)
+
+        Returns:
+            (dict): ex: { "buyNowPrice": 10, "sellNowPrice": 10, "numListed": 100 }
         """
         query = """query CollectionsStats($slug: String!) {
             instrumentTV2(slug: $slug) {
@@ -104,6 +121,13 @@ class TensorClient:
 
     def get_collection_floor(self, slug):
         """
+        Retrieve the lowest price of the item listed for the given collection.
+
+        Args:
+            slug (str): the collection slug (ID)
+
+        Returns:
+            (float): The floor price (buyNow).
         """
         data = self.get_collection_infos(slug)
         if data is None:
@@ -195,6 +219,49 @@ class TensorClient:
             "price": str(to_solami(price))
         }
         return self.execute_query(query, variables, "tswapListNftTx")
+
+    def edit_nft_listing(self, mint, price, wallet_address=None):
+        """
+        """
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TswapEditSingleListing",
+            "tswapEditSingleListingTx",
+            [
+                ("mint", "String"),
+                ("owner", "String"),
+                ("price", "Decimal"),
+            ]
+        )
+        variables = {
+            "mint": mint,
+            "owner": wallet_address,
+            "price": str(to_solami(price))
+        }
+        return self.execute_query(query, variables, "tswapEditSingleListingTx")
+
+    def delist_nft(self, mint, wallet_address=None):
+        """
+        """
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TswapDelistNftTx",
+            "tswapDelistNftTx",
+            [
+                ("mint", "String"),
+                ("owner", "String"),
+            ]
+        )
+        variables = {
+            "mint": mint,
+            "owner": wallet_address,
+        }
+        return self.execute_query(query, variables, "TswapDelistNftTx")
+
 
     def set_cnft_collection_bid(
         self,
