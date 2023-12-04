@@ -53,8 +53,7 @@ client.list_nft(nft_mint, price) # we assume your keypair owns the NFT.
 
 ## Documenation
 
-A full [documentation]("https://tensortradepy.thewise.trade/specifications") is
-available.
+A [full documentation](https://tensortradepy.thewise.trade/) is available.
 
 ## Functions available
 
