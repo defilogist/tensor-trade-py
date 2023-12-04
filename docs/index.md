@@ -44,7 +44,7 @@ client = TensorClient(
 
 floor = client.get_collection_floor("theheist")
 price = floor * 0.99
-const nft_mint = "nft-mint"
+nft_mint = "nft-mint"
 client.list_nft(nft_mint, price) # we assume your keypair owns the NFT.
 ```
 
