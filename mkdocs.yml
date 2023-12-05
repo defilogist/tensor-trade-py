@@ -3,7 +3,9 @@ site_url: https://tensortradepy.thewise.trade/
 nav:
   - Getting started: index.md
   - Specifications: specifications.md
-theme: dracula
+theme: 
+  name: readthedocs
+  highlightjs: true
 
 
 markdown_extensions:
@@ -12,3 +14,6 @@ markdown_extensions:
 plugins:
   - search
   - mkdocstrings
+
+extra_javascript:
+  - js/highlight.min.js

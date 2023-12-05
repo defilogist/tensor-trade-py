@@ -1,6 +1,4 @@
-import base58
 import requests
-import uuid
 
 from .solana import (
     create_client,
@@ -38,6 +36,12 @@ class TensorClient:
         self.init_solana_client(private_key, network)
 
     def init_client(self, api_key: str):
+        """
+        Initialize the Tensor Trade client and the `requests` session.
+
+        Arguments:
+            api_key (str): The Tensor Trade API authentication key.
+        """
         self.session = requests.session()
         self.api_key = api_key
         self.session.headers = {
@@ -48,6 +52,13 @@ class TensorClient:
 
     def init_solana_client(self, private_key, network):
         """
+        Initialize the Solana client.
+
+        Arguments:
+            private_key (str): The private key of the wallet.
+            network (str): The Solana network to use.
+
+        Returns:
         """
         self.keypair = None
         if private_key is not None:
@@ -56,9 +67,15 @@ class TensorClient:
         if network.startswith("http"):
             url = network
         self.solana_client = create_client(url)
+        return self.solana_client
 
     def send_query(self, query, variables):
         """
+        Send a query to the Tensor Trade API.
+
+        Arguments:
+            query (str): The GraphQL query.
+            variables (dict): The GraphQL variables.
         """
         resp = self.session.post(
             "https://api.tensor.so/graphql/",
@@ -78,12 +95,34 @@ class TensorClient:
                 raise
 
     def extract_transaction(self, data, name):
+        """
+        Extract the transaction from the GraphQL response.
+
+        Arguments:
+            data (dict): The GraphQL response.
+            name (str): The name of the transaction.
+        """
         return data[name]["txs"][0]["tx"]["data"]
 
     def extract_versioned_transaction(self, data, name):
+        """
+        Extract the transaction from the GraphQL response.
+
+        Arguments:
+            data (dict): The GraphQL response.
+            name (str): The name of the transaction.
+        """
         return data[name]["txs"][0]["txV0"]["data"]
 
     def execute_query(self, query, variables, name):
+        """
+        Execute a GraphQL query and send the transaction to the Solana network.
+
+        Arguments:
+            query (str): The GraphQL query.
+            variables (dict): The GraphQL variables.
+            name (str): The name of the transaction.
+        """
         data = self.send_query(query, variables)
         if False and data[name]["txs"][0].get("txV0", None) is not None:
             transaction = self.extract_versioned_transaction(data, name)
@@ -150,6 +189,13 @@ class TensorClient:
 
     def list_cnft(self, mint, price, wallet_address=None):
         """
+        List a CNFT for sale.
+
+        Arguments:
+            mint (str): The mint of the CNFT.
+            price (float): The price of the CNFT.
+            wallet_address (str): The wallet address of the owner. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -172,6 +218,13 @@ class TensorClient:
 
     def edit_cnft_listing(self, mint, price, wallet_address=None):
         """
+        Edit the price of a CNFT listing.
+
+        Arguments:
+            mint (str): The mint of the CNFT.
+            price (float): The price of the CNFT.
+            wallet_address (str): The wallet address of the owner. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -194,6 +247,12 @@ class TensorClient:
 
     def delist_cnft(self, mint, wallet_address=None):
         """
+        Delist a CNFT.
+
+        Arguments:
+            mint (str): The mint of the CNFT.
+            wallet_address (str): The wallet address of the owner. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -214,6 +273,13 @@ class TensorClient:
 
     def list_nft(self, mint, price, wallet_address=None):
         """
+        List a NFT for sale.
+
+        Arguments:
+            mint (str): The mint of the NFT.
+            price (float): The price of the NFT.
+            wallet_address (str): The wallet address of the owner. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -236,6 +302,13 @@ class TensorClient:
 
     def edit_nft_listing(self, mint, price, wallet_address=None):
         """
+        Edit the price of a NFT listing.
+
+        Arguments:
+            mint (str): The mint of the NFT.
+            price (float): The price of the NFT.
+            wallet_address (str): The wallet address of the owner. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -258,6 +331,12 @@ class TensorClient:
 
     def delist_nft(self, mint, wallet_address=None):
         """
+        Delist a NFT.
+
+        Arguments:
+            mint (str): The mint of the NFT.
+            wallet_address (str): The wallet address of the owner. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -285,6 +364,14 @@ class TensorClient:
         wallet_address=None
     ):
         """
+        Set a bid for a CNFT collection.
+
+        Arguments:
+            slug (str): The slug of the CNFT collection.
+            price (float): The price of the cNFT bid.
+            quantity (float): The quantity of CNFTs to bid for.
+            wallet_address (str): The wallet address of the bidder. If not
+                specified, the private key of the Solana client will be used.
         """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
@@ -322,6 +409,12 @@ class TensorClient:
         quantity
     ):
         """
+        Edit a bid for a CNFT collection.
+
+        Arguments:
+            bid_address (str): The address of the bid.
+            price (float): The price of the cNFT bid.
+            quantity (float): The quantity of CNFTs to bid for.
         """
         query = build_tensor_query(
             "TcompEditBidTx",
@@ -344,6 +437,10 @@ class TensorClient:
         bid_address
     ):
         """
+        Cancel a bid for a CNFT collection.
+
+        Arguments:
+            bid_address (str): The address of the bid.
         """
         query = build_tensor_query(
             "TcompCancelCollBidTx",
@@ -365,6 +462,12 @@ class TensorClient:
         wallet_address=None
     ):
         """
+        Set a bid for a NFT collection.
+
+        Arguments:
+            slug (str): The slug of the NFT collection.
+            price (float): The price of the NFT bid.
+            quantity (float): The quantity of NFTs to bid for.
         """
         self.set_cnft_collection_bid(
             slug,
@@ -379,6 +482,12 @@ class TensorClient:
         quantity
     ):
         """
+        Edit a bid for a NFT collection.
+
+        Arguments:
+            bid_address (str): The address of the bid.
+            price (float): The price of the NFT bid.
+            quantity (float): The quantity of NFTs to bid for.
         """
         self.edit(
             bid_address,
@@ -391,6 +500,10 @@ class TensorClient:
         bid_address
     ):
         """
+        Cancel a bid for a NFT collection.
+
+        Arguments:
+            bid_address (str): The address of the bid.
         """
         self.cancel_cnft_collection_bid(
             bid_address
@@ -403,6 +516,16 @@ class TensorClient:
         price,
         wallet_address=None
     ):
+        """
+        Buy a NFT from the marketplace.
+
+        Arguments:
+            seller (str): The address of the seller.
+            mint (str): The mint of the NFT.
+            price (float): The price of the NFT.
+            wallet_address (str): The wallet address of the buyer. If not
+                specified, the private key of the Solana client will be used.
+        """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
 
@@ -424,7 +547,6 @@ class TensorClient:
         }
         return self.execute_query(query, variables, "tswapBuySingleListingTx")
 
-
     def buy_cnft(
         self,
         seller,
@@ -432,6 +554,16 @@ class TensorClient:
         price,
         wallet_address=None
     ):
+        """
+        Buy a CNFT from the marketplace.
+
+        Arguments:
+            seller (str): The address of the seller.
+            mint (str): The mint of the CNFT.
+            price (float): The price of the CNFT.
+            wallet_address (str): The address of the buyer. If not provided,
+                the wallet address of the current keypair will be used.
+        """
         if wallet_address is None:
             wallet_address = str(self.keypair.pubkey())
 
