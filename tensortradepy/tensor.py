@@ -68,6 +68,8 @@ class TensorClient:
             }
         )
         try:
+            import pprint
+            pprint.pprint(resp.text)
             return resp.json().get("data", {})
         except requests.exceptions.JSONDecodeError:
             if resp.status_code == 403:
@@ -83,7 +85,7 @@ class TensorClient:
 
     def execute_query(self, query, variables, name):
         data = self.send_query(query, variables)
-        if data[name]["txs"][0].get("txV0", None) is not None:
+        if False and data[name]["txs"][0].get("txV0", None) is not None:
             transaction = self.extract_versioned_transaction(data, name)
             return run_solana_versioned_transaction(
                 self.solana_client,
@@ -420,5 +422,33 @@ class TensorClient:
           "mint": mint,
           "buyer": wallet_address,
         }
-        print(variables)
         return self.execute_query(query, variables, "tswapBuySingleListingTx")
+
+
+    def buy_cnft(
+        self,
+        seller,
+        mint,
+        price,
+        wallet_address=None
+    ):
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        query = build_tensor_query(
+            "TcompBuyTx",
+            "tcompBuyTx",
+            [
+                ("buyer", "String"),
+                ("maxPrice", "Decimal"),
+                ("mint", "String"),
+                ("owner", "String")
+            ]
+        )
+        variables = {
+          "owner": seller,
+          "maxPrice": str(to_solami(price)),
+          "mint": mint,
+          "buyer": wallet_address,
+        }
+        return self.execute_query(query, variables, "tcompBuyTx")
