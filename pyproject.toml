@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tensortradepy"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python client for the Tensor Trade API"
 authors = ["Defilogist <defilogist@thewise.trade>"]
 license = "MIT"
