@@ -67,6 +67,7 @@
           - buy_cnft
           - buy_nft
 
+## tensortradepy.exceptions
 
 ### Error Handling
 
