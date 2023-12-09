@@ -13,6 +13,12 @@ from .helpers import (
     build_tensor_query
 )
 
+from .exceptions import (
+    NotListedException,
+    TransactionFailedException,
+    WrongAPIKeyException,
+)
+
 
 class TensorClient:
 
@@ -85,12 +91,10 @@ class TensorClient:
             }
         )
         try:
-            import pprint
-            pprint.pprint(resp.text)
             return resp.json().get("data", {})
         except requests.exceptions.JSONDecodeError:
             if resp.status_code == 403:
-                raise Exception("Invalid API Key")
+                raise WrongAPIKeyException("Invalid API Key")
             else:
                 raise
 
@@ -538,14 +542,32 @@ class TensorClient:
                 ("mint", "String"),
                 ("owner", "String")
             ]
-        )
+            )
         variables = {
           "owner": seller,
           "maxPrice": str(to_solami(price)),
           "mint": mint,
           "buyer": wallet_address,
         }
-        return self.execute_query(query, variables, "tswapBuySingleListingTx")
+
+        not_listed = False
+        try:
+            res = self.execute_query(
+                query,
+                variables,
+                "tswapBuySingleListingTx"
+            )
+        except TransactionFailedException as e:
+            if "ComputeBudget" in str(e):
+                not_listed = True
+            else:
+                raise
+
+        if not_listed:
+            raise NotListedException
+
+        return res
+
 
     def buy_cnft(
         self,
@@ -555,12 +577,12 @@ class TensorClient:
         wallet_address=None
     ):
         """
-        Buy a CNFT from the marketplace.
+        Buy a cNFT from the marketplace.
 
         Arguments:
             seller (str): The address of the seller.
-            mint (str): The mint of the CNFT.
-            price (float): The price of the CNFT.
+            mint (str): The mint of the cNFT.
+            price (float): The price of the cNFT.
             wallet_address (str): The address of the buyer. If not provided,
                 the wallet address of the current keypair will be used.
         """
