@@ -55,3 +55,5 @@ All functions available are listed in the [specifications]("https://tensortradep
 ## About
 
 This client is developed by [thewise.trade](https://thewise.trade).
+
+You can tip us at thewisetrade.sol or by [buying our NFT](https://exchange.art/editions/9rukfGYfTxpmiRFrGvhSSCASsqhgsWGundBHNQB2vKPy)

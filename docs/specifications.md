@@ -28,7 +28,7 @@
 
 ::: tensortradepy.tensor.TensorClient
     options:
-        show_source: true
+        show_source: false
         heading_level: 4
         members_order: source
         members:
@@ -66,3 +66,12 @@
         members:
           - buy_cnft
           - buy_nft
+
+
+### Error Handling
+
+::: tensortradepy.exceptions
+    options:
+        show_source: false
+        heading_level: 4
+        members_order: source
