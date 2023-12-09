@@ -66,6 +66,8 @@ A [full documentation](https://tensortradepy.thewise.trade/) is available.
 * set\_cnft\_collection\_bid(slug, price, quantity)
 * edit\_cnft\_collection\_bid(slug, price, quantity)
 * cancel\_cnft\_collection\_bid(slug, price, quantity)
+* buy\_nft\_(seller, mint\_address, price)
+* buy\_cnft\_(seller, mint\_address, price)
 
 ## Contributions
 
