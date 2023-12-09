@@ -16,7 +16,8 @@ may occur when using this SDK. Use at your own risk.
 
 ## Tips
 
-If you like this client, you can tip me at: thewisetrade.sol
+If you like this client, you can tip me at: thewisetrade.sol or buy 
+[the logo NFT](https://exchange.art/editions/9rukfGYfTxpmiRFrGvhSSCASsqhgsWGundBHNQB2vKPy).
 
 ## Install
 
