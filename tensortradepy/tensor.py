@@ -10,7 +10,8 @@ from .solana import (
 )
 
 from .helpers import (
-    build_tensor_query
+    build_tensor_query,
+    default_return
 )
 
 from .exceptions import (
@@ -65,6 +66,7 @@ class TensorClient:
             network (str): The Solana network to use.
 
         Returns:
+            The solana client object.
         """
         self.keypair = None
         if private_key is not None:
@@ -94,7 +96,7 @@ class TensorClient:
             return resp.json().get("data", {})
         except requests.exceptions.JSONDecodeError:
             if resp.status_code == 403:
-                raise WrongAPIKeyException("Invalid API Key")
+                raise WrongAPIKeyException("Invalid API Key")
             else:
                 raise
 
@@ -130,18 +132,19 @@ class TensorClient:
         data = self.send_query(query, variables)
         if False and data[name]["txs"][0].get("txV0", None) is not None:
             transaction = self.extract_versioned_transaction(data, name)
-            return run_solana_versioned_transaction(
+            run_solana_versioned_transaction(
                 self.solana_client,
                 self.keypair,
                 transaction
             )
         else:
             transaction = self.extract_transaction(data, name)
-            return run_solana_transaction(
+            run_solana_transaction(
                 self.solana_client,
                 self.keypair,
                 transaction
             )
+        return data
 
     def get_collection_infos(self, slug: str):
         """
@@ -149,10 +152,10 @@ class TensorClient:
         sellNowPrice and the number of listed elements.
 
         Args:
-            slug (str): the collection slug (ID)
+            slug (str): the collection slug (ID)
 
         Returns:
-            (dict): ex: { "buyNowPrice": 10, "sellNowPrice": 10, "numListed": 100 }
+            (dict): ex: { "buyNowPrice": 10, "sellNowPrice": 10, "numListed": 100 }
         """
         query = """query CollectionsStats($slug: String!) {
             instrumentTV2(slug: $slug) {
@@ -176,12 +179,12 @@ class TensorClient:
         data = self.send_query(query, variables)
         return data.get("instrumentTV2", {})
 
-    def get_collection_floor(self, slug):
+    def get_collection_floor(self, slug: str):
         """
         Retrieve the lowest price of the item listed for the given collection.
 
         Args:
-            slug (str): the collection slug (ID)
+            slug (str): the collection slug (ID)
 
         Returns:
             (float): The floor price (buyNow).
@@ -190,6 +193,26 @@ class TensorClient:
         if data is None:
             raise Exception("The collection %s is not listed." % slug)
         return from_solami(data["statsV2"]["buyNowPrice"])
+
+    def get_collection_whitelist(self, slug: str):
+        """
+        """
+        return_format = {
+            "address": None
+        }
+        query = build_tensor_query(
+            "TswapWhitelist",
+            "tswapWhitelist",
+            [
+                ("slug", "String"),
+            ],
+            return_format
+        )
+        variables = {
+            "slug": slug
+        }
+        data = self.send_query(query, variables)
+        return data
 
     def list_cnft(self, mint, price, wallet_address=None):
         """
@@ -403,8 +426,7 @@ class TensorClient:
           "quantity": quantity,
           "slug": slug,
         }
-        data = self.execute_query(query, variables, "tcompBidTx")
-        return data
+        return self.execute_query(query, variables, "tcompBidTx")
 
     def edit_cnft_collection_bid(
         self,
@@ -606,3 +628,149 @@ class TensorClient:
           "buyer": wallet_address,
         }
         return self.execute_query(query, variables, "tcompBuyTx")
+
+    def create_pool(self,
+        slug,
+        starting_price,
+        pool_type="TRADE",
+        curve_type="LINEAR",
+        delta=1.0,
+        compound_fees=False,
+        fee_bps=None,
+        wallet_address=None
+    ):
+        if wallet_address is None:
+            wallet_address = str(self.keypair.pubkey())
+
+        if pool_type not in ["TRADE", "LINEAR", "NFT"]:
+            raise Exception(
+                "Wrong pool type should be TRADE, LINEAR, or NFT"
+            )
+
+        return_format = default_return.copy()
+        return_format["pool"] = None
+        query = build_tensor_query(
+            "TswapInitPoolTx",
+            "tswapInitPoolTx",
+            [
+                ("config", "PoolConfig"),
+                ("owner", "String"),
+                ("slug", "String"),
+            ],
+            return_format
+        )
+
+        config = {
+            "poolType": pool_type,
+            "curveType": curve_type,
+            "delta": str(to_solami(delta)),
+            "startingPrice": str(to_solami(starting_price)),
+            "mmCompoundFees": compound_fees,
+            "mmFeeBps": fee_bps * 100
+        }
+
+        variables = {
+          "config": config,
+          "slug": slug,
+          "owner": wallet_address
+        }
+
+        data = self.execute_query(query, variables, "tswapInitPoolTx")
+        return data["tswapInitPoolTx"]["pool"]
+
+    def pool_deposit_nft(self, pool, mint):
+        query = build_tensor_query(
+            "TswapDepositWithdrawNftTx",
+            "tswapDepositWithdrawNftTx",
+            [
+                ("action", "DepositeWidthdrawAction"),
+                ("mint", "String"),
+                ("pool", "String")
+            ]
+        )
+        variables = {
+          "action": "DEPOSIT",
+          "mint": mint,
+          "pool": pool,
+        }
+        return self.execute_query(query, variables, "tcompBuyTx")
+
+    def pool_withdraw_nft(self, pool, mint):
+        query = build_tensor_query(
+            "TswapDepositWithdrawNftTx",
+            "tswapDepositWithdrawNftTx",
+            [
+                ("action", "DepositeWidthdrawAction"),
+                ("mint", "String"),
+                ("pool", "String")
+            ]
+        )
+        variables = {
+          "action": "WITHDRAW",
+          "mint": mint,
+          "pool": pool,
+        }
+        return self.execute_query(
+            query,
+            variables,
+            "tswapDepositWithdrawNftTx"
+        )
+
+    def pool_deposit_sols(self, pool, amount):
+        query = build_tensor_query(
+            "TswapDepositWithdrawSolTx",
+            "tswapDepositWithdrawSolTx",
+            [
+                ("action", "DepositeWidthdrawAction"),
+                ("lamports", "Decimal"),
+                ("pool", "String")
+            ]
+        )
+        variables = {
+          "action": "WITHDRAW",
+          "lamports": amount,
+          "pool": pool,
+        }
+        return self.execute_query(
+            query,
+            variables,
+            "tswapDepositWithdrawSolTx"
+        )
+
+    def pool_withdraw_sols(self, pool, amount):
+        query = build_tensor_query(
+            "TswapDepositWithdrawSolTx",
+            "tswapDepositWithdrawSolTx",
+            [
+                ("action", "DepositeWidthdrawAction"),
+                ("lamports", "Decimal"),
+                ("pool", "String")
+            ]
+        )
+        variables = {
+          "action": "WITHDRAW",
+          "lamports": amount,
+          "pool": pool,
+        }
+        return self.execute_query(
+            query,
+            variables,
+            "tswapDepositWithdrawSolTx"
+        )
+
+    def close_pool(self, pool):
+        query = build_tensor_query(
+            "TswapClosePoolTx",
+            "tswapClosePoolTx",
+            [
+                ("pool", "String")
+            ]
+        )
+        variables = {
+          "pool": pool,
+        }
+        return self.execute_query(
+            query,
+            variables,
+            "tswapClosePoolTx"
+        )

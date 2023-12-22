@@ -15,7 +15,7 @@ def create_client(url):
 
 
 def to_solami(price):
-    return price * 1_000_000_000
+    return int(price * 1_000_000_000)
 
 
 def from_solami(price):
