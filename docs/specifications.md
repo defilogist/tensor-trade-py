@@ -55,6 +55,23 @@
           - cancel_nft_collection_bid
           - cancel_cnft_collection_bid
 
+
+### Pools (AMMs, multi-listing, multi-bids)
+
+::: tensortradepy.tensor.TensorClient
+    options:
+        show_source: false
+        heading_level: 4
+        members_order: source
+        members:
+          - create_pool
+          - pool_deposit_nft
+          - pool_withdraw_nft
+          - pool_deposit_sols
+          - pool_withdraw_sols
+          - close_pool
+
+
 ### Buying
 
 
