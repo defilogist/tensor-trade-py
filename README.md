@@ -1,3 +1,5 @@
+# DEPRECATED: Tensor has new API. Update in progress
+
 # (unofficial) Python Client for Tensor Trade
 
 This library is a simple Python client for the Tensor Trade API. It's aimed is 
